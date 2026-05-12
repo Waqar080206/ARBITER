@@ -1,8 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { HomeHero } from "./components/hero";
-import { AnalyzerForm } from "./components/analyzer-form";
+import { Navbar } from "./components/navbar";
+import { HeroSection } from "./components/hero";
+import { AnalysisInput } from "./components/analyzer-form";
+import { LoadingState } from "./components/loading-state";
 import { TrustCard } from "./components/trust-card";
 import { getMockAnalysis, loadingMessages } from "@/lib/trust";
 import type { AnalysisResult } from "@/lib/trust";
@@ -10,17 +12,18 @@ import type { AnalysisResult } from "@/lib/trust";
 export default function Home() {
   const [inputValue, setInputValue] = useState("");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [stage, setStage] = useState<"idle" | "loading" | "result">("idle");
   const [statusIndex, setStatusIndex] = useState(0);
 
   useEffect(() => {
-    if (!isAnalyzing) return undefined;
+    if (stage !== "loading") return undefined;
 
     const interval = window.setInterval(() => {
       setStatusIndex((current) => (current + 1) % loadingMessages.length);
-    }, 1800);
+    }, 2400);
+
     return () => window.clearInterval(interval);
-  }, [isAnalyzing]);
+  }, [stage]);
 
   const loadingText = useMemo(() => loadingMessages[statusIndex], [statusIndex]);
 
@@ -28,61 +31,41 @@ export default function Home() {
     event.preventDefault();
     if (!inputValue.trim()) return;
 
-    setIsAnalyzing(true);
+    setStage("loading");
     setAnalysis(null);
 
     window.setTimeout(() => {
       setAnalysis(getMockAnalysis(inputValue));
-      setIsAnalyzing(false);
-    }, 1200);
+      setStage("result");
+      setStatusIndex(0);
+    }, 1300);
   };
 
   const handleReset = () => {
+    setStage("idle");
     setAnalysis(null);
-    setIsAnalyzing(false);
     setStatusIndex(0);
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <header className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-          <HomeHero />
-          <div className="rounded-[28px] border border-border bg-surface-strong p-8 shadow-soft">
-            <div className="space-y-5">
-              <div className="rounded-full bg-surface px-4 py-2 text-xs font-semibold uppercase tracking-[0.36em] text-muted-foreground inline-block">
-                Calm intelligence
-              </div>
-              <p className="max-w-sm text-sm leading-7 text-muted-foreground">
-                A premium interface for everyday trust decisions. Simple, explainable, and intentionally calm.
-              </p>
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-border bg-background px-5 text-sm font-semibold text-foreground transition hover:bg-surface-strong"
-              >
-                View source
-              </a>
-            </div>
-          </div>
-        </header>
-
-        <main className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-          <AnalyzerForm
+      <Navbar />
+      <main className="mx-auto max-w-5xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
+        <HeroSection />
+        <div className="space-y-8">
+          <AnalysisInput
             inputValue={inputValue}
-            disabled={isAnalyzing}
-            onChange={(value) => setInputValue(value)}
+            disabled={stage === "loading"}
+            onChange={setInputValue}
             onSubmit={handleSubmit}
           />
-          <TrustCard
-            analysis={analysis}
-            isAnalyzing={isAnalyzing}
-            loadingMessage={loadingText}
-            onReset={handleReset}
-          />
-        </main>
-      </div>
+          {stage === "loading" ? (
+            <LoadingState phrase={loadingText} />
+          ) : stage === "result" ? (
+            <TrustCard analysis={analysis} onReset={handleReset} />
+          ) : null}
+        </div>
+      </main>
     </div>
   );
 }

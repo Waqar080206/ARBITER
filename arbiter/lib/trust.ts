@@ -1,14 +1,25 @@
+export type SignalVariant = "positive" | "warning" | "negative";
+
+export type AnalysisSignal = {
+  text: string;
+  variant: SignalVariant;
+};
+
 export type AnalysisResult = {
   score: number;
   verdict: "Likely Real" | "Suspicious" | "Likely Fake";
-  signals: string[];
+  tone: SignalVariant;
+  preview: string;
+  signals: AnalysisSignal[];
   explanation: string;
 };
 
 export const loadingMessages = [
-  "Analyzing source credibility...",
-  "Detecting behavioral patterns...",
-  "Evaluating trust indicators...",
+  "Analyzing source credibility…",
+  "Detecting behavioral patterns…",
+  "Evaluating trust indicators…",
+  "Cross-referencing signals…",
+  "Generating trust assessment…",
 ];
 
 const signalPools = {
@@ -52,12 +63,15 @@ const selectSignals = (pool: string[], seed: number) =>
 export function getMockAnalysis(input: string): AnalysisResult {
   const seed = getSeed(input);
   const bucket = seed % 3;
+  const preview = input.trim().slice(0, 80).replace(/\s+$/, "") + (input.trim().length > 80 ? "…" : "");
 
   if (bucket === 0) {
     return {
       score: 82,
       verdict: "Likely Real",
-      signals: selectSignals(signalPools.real, seed),
+      tone: "positive",
+      preview,
+      signals: selectSignals(signalPools.real, seed).map((text) => ({ text, variant: "positive" })),
       explanation:
         "The content displays credible language, clear attribution, and patterns consistent with genuine sources. It still benefits from direct verification, but the indicators are positive.",
     };
@@ -67,7 +81,9 @@ export function getMockAnalysis(input: string): AnalysisResult {
     return {
       score: 56,
       verdict: "Suspicious",
-      signals: selectSignals(signalPools.suspicious, seed),
+      tone: "warning",
+      preview,
+      signals: selectSignals(signalPools.suspicious, seed).map((text) => ({ text, variant: "warning" })),
       explanation:
         "Several signals suggest this content should be reviewed carefully. Some attribution details are missing and the language leans toward persuasion rather than evidence.",
     };
@@ -76,20 +92,10 @@ export function getMockAnalysis(input: string): AnalysisResult {
   return {
     score: 28,
     verdict: "Likely Fake",
-    signals: selectSignals(signalPools.fake, seed),
+    tone: "negative",
+    preview,
+    signals: selectSignals(signalPools.fake, seed).map((text) => ({ text, variant: "negative" })),
     explanation:
       "The content shows multiple signs of low authenticity, including weak source signals and emotional wording. Treat it cautiously and seek stronger verification.",
   };
-}
-
-export function getVerdictClasses(verdict: string) {
-  if (verdict === "Likely Real") {
-    return "bg-trust-green/15 text-trust-green";
-  }
-
-  if (verdict === "Suspicious") {
-    return "bg-trust-amber/15 text-trust-amber";
-  }
-
-  return "bg-trust-red/15 text-trust-red";
 }
